@@ -1685,7 +1685,7 @@ examples can be found on the LodePNG website.
 #include "lodepng.h"
 #include <iostream>
 
-int main(int argc, char *argv[]) {
+int main(int argc, const char** argv) {
   const char* filename = argc > 1 ? argv[1] : "test.png";
 
   //load and decode
@@ -1704,7 +1704,7 @@ int main(int argc, char *argv[]) {
 
 #include "lodepng.h"
 
-int main(int argc, char *argv[]) {
+int main(int argc, const char** argv) {
   unsigned error;
   unsigned char* image;
   size_t width, height;
