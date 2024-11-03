@@ -1,5 +1,5 @@
 /*
-LodePNG version 20220613
+LodePNG version 20220717
 
 Copyright (c) 2005-2022 Lode Vandevenne
 
@@ -44,7 +44,7 @@ Rename this file to lodepng.cpp to use it for C++, or to lodepng.c to use it for
 #pragma warning( disable : 4996 ) /*VS does not like fopen, but fopen_s is not standard C so unusable here*/
 #endif /*_MSC_VER */
 
-const char* LODEPNG_VERSION_STRING = "20220613";
+const char* LODEPNG_VERSION_STRING = "20220717";
 
 /*
 This source file is divided into the following large parts. The code sections
@@ -711,10 +711,11 @@ static unsigned HuffmanTree_makeTable(HuffmanTree* tree) {
   numpresent = 0;
   for(i = 0; i < tree->numcodes; ++i) {
     unsigned l = tree->lengths[i];
+    unsigned symbol, reverse;
     if(l == 0) continue;
-    unsigned symbol = tree->codes[i]; /*the huffman bit pattern. i itself is the value.*/
+    symbol = tree->codes[i]; /*the huffman bit pattern. i itself is the value.*/
     /*reverse bits, because the huffman bits are given in MSB first order but the bit reader reads LSB first*/
-    unsigned reverse = reverseBits(symbol, l);
+    reverse = reverseBits(symbol, l);
     numpresent++;
 
     if(l <= FIRSTBITS) {
@@ -1367,8 +1368,11 @@ static unsigned inflateNoCompression(ucvector* out, LodePNGBitReader* reader,
   /*read the literal data: LEN bytes are now stored in the out buffer*/
   if(bytepos + LEN > size) return 23; /*error: reading outside of in buffer*/
 
-  lodepng_memcpy(out->data + out->size - LEN, reader->data + bytepos, LEN);
-  bytepos += LEN;
+  /*out->data can be NULL (when LEN is zero), and arithmetics on NULL ptr is undefined*/
+  if (LEN) {
+    lodepng_memcpy(out->data + out->size - LEN, reader->data + bytepos, LEN);
+    bytepos += LEN;
+  }
 
   reader->bp = bytepos << 3u;
 
@@ -2369,7 +2373,7 @@ const LodePNGDecompressSettings lodepng_default_decompress_settings = {0, 0, 0, 
 /* ////////////////////////////////////////////////////////////////////////// */
 
 
-#ifndef LODEPNG_NO_COMPILE_CRC
+#ifdef LODEPNG_COMPILE_CRC
 /* CRC polynomial: 0xedb88320 */
 static unsigned lodepng_crc32_table[256] = {
            0u, 1996959894u, 3993919788u, 2567524794u,  124634137u, 1886057615u, 3915621685u, 2657392035u,
@@ -2415,9 +2419,11 @@ unsigned lodepng_crc32(const unsigned char* data, size_t length) {
   }
   return r ^ 0xffffffffu;
 }
-#else /* !LODEPNG_NO_COMPILE_CRC */
+#else /* LODEPNG_COMPILE_CRC */
+/*in this case, the function is only declared here, and must be defined externally
+so that it will be linked in*/
 unsigned lodepng_crc32(const unsigned char* data, size_t length);
-#endif /* !LODEPNG_NO_COMPILE_CRC */
+#endif /* LODEPNG_COMPILE_CRC */
 
 /* ////////////////////////////////////////////////////////////////////////// */
 /* / Reading and writing PNG color channel bits                             / */
@@ -2455,7 +2461,7 @@ static void setBitOfReversedStream(size_t* bitpointer, unsigned char* bitstream,
 /* ////////////////////////////////////////////////////////////////////////// */
 
 unsigned lodepng_chunk_length(const unsigned char* chunk) {
-  return lodepng_read32bitInt(&chunk[0]);
+  return lodepng_read32bitInt(chunk);
 }
 
 void lodepng_chunk_type(char type[5], const unsigned char* chunk) {
@@ -6482,7 +6488,7 @@ unsigned decompress(std::vector<unsigned char>& out, const unsigned char* in, si
   size_t buffersize = 0;
   unsigned error = zlib_decompress(&buffer, &buffersize, 0, in, insize, &settings);
   if(buffer) {
-    out.insert(out.end(), &buffer[0], &buffer[buffersize]);
+    out.insert(out.end(), buffer, &buffer[buffersize]);
     lodepng_free(buffer);
   }
   return error;
@@ -6501,7 +6507,7 @@ unsigned compress(std::vector<unsigned char>& out, const unsigned char* in, size
   size_t buffersize = 0;
   unsigned error = zlib_compress(&buffer, &buffersize, in, insize, &settings);
   if(buffer) {
-    out.insert(out.end(), &buffer[0], &buffer[buffersize]);
+    out.insert(out.end(), buffer, &buffer[buffersize]);
     lodepng_free(buffer);
   }
   return error;
@@ -6546,7 +6552,7 @@ unsigned decode(std::vector<unsigned char>& out, unsigned& w, unsigned& h, const
     state.info_raw.colortype = colortype;
     state.info_raw.bitdepth = bitdepth;
     size_t buffersize = lodepng_get_raw_size(w, h, &state.info_raw);
-    out.insert(out.end(), &buffer[0], &buffer[buffersize]);
+    out.insert(out.end(), buffer, &buffer[buffersize]);
   }
   lodepng_free(buffer);
   return error;
@@ -6564,7 +6570,7 @@ unsigned decode(std::vector<unsigned char>& out, unsigned& w, unsigned& h,
   unsigned error = lodepng_decode(&buffer, &w, &h, &state, in, insize);
   if(buffer && !error) {
     size_t buffersize = lodepng_get_raw_size(w, h, &state.info_raw);
-    out.insert(out.end(), &buffer[0], &buffer[buffersize]);
+    out.insert(out.end(), buffer, &buffer[buffersize]);
   }
   lodepng_free(buffer);
   return error;
@@ -6596,7 +6602,7 @@ unsigned encode(std::vector<unsigned char>& out, const unsigned char* in, unsign
   size_t buffersize;
   unsigned error = lodepng_encode_memory(&buffer, &buffersize, in, w, h, colortype, bitdepth);
   if(buffer) {
-    out.insert(out.end(), &buffer[0], &buffer[buffersize]);
+    out.insert(out.end(), buffer, &buffer[buffersize]);
     lodepng_free(buffer);
   }
   return error;
@@ -6616,7 +6622,7 @@ unsigned encode(std::vector<unsigned char>& out,
   size_t buffersize;
   unsigned error = lodepng_encode(&buffer, &buffersize, in, w, h, &state);
   if(buffer) {
-    out.insert(out.end(), &buffer[0], &buffer[buffersize]);
+    out.insert(out.end(), buffer, &buffer[buffersize]);
     lodepng_free(buffer);
   }
   return error;
