@@ -1,5 +1,5 @@
 /*
-LodePNG version 20241223
+LodePNG version 20241228
 
 Copyright (c) 2005-2024 Lode Vandevenne
 
@@ -44,7 +44,7 @@ Rename this file to lodepng.cpp to use it for C++, or to lodepng.c to use it for
 #pragma warning( disable : 4996 ) /*VS does not like fopen, but fopen_s is not standard C so unusable here*/
 #endif /*_MSC_VER */
 
-const char* LODEPNG_VERSION_STRING = "20241223";
+const char* LODEPNG_VERSION_STRING = "20241228";
 
 /*
 This source file is divided into the following large parts. The code sections
@@ -346,54 +346,39 @@ static void lodepng_set32bitInt(unsigned char* buffer, unsigned value) {
 #ifdef LODEPNG_COMPILE_DISK
 
 /* returns negative value on error. This should be pure C compatible, so no fstat. */
-static long lodepng_filesize(const char* filename) {
-  FILE* file;
+static long lodepng_filesize(FILE* file) {
   long size;
-  file = fopen(filename, "rb");
-  if(!file) return -1;
-
-  if(fseek(file, 0, SEEK_END) != 0) {
-    fclose(file);
-    return -1;
-  }
-
+  if(fseek(file, 0, SEEK_END) != 0) return -1;
   size = ftell(file);
   /* It may give LONG_MAX as directory size, this is invalid for us. */
-  if(size == LONG_MAX) size = -1;
-
-  fclose(file);
+  if(size == LONG_MAX) return -1;
+  if(fseek(file, 0, SEEK_SET) != 0) return -1;
   return size;
 }
 
-/* load file into buffer that already has the correct allocated size. Returns error code.*/
-static unsigned lodepng_buffer_file(unsigned char* out, size_t size, const char* filename) {
-  FILE* file;
-  size_t readsize;
-  file = fopen(filename, "rb");
-  if(!file) return 78;
-
-  readsize = fread(out, 1, size, file);
-  fclose(file);
-
-  if(readsize != size) return 78;
-  return 0;
+/* Allocates the output buffer to the file size and reads the file into it. Returns error code.*/
+static unsigned lodepng_load_file_(unsigned char** out, size_t* outsize, FILE* file) {
+  long size = lodepng_filesize(file);
+  if(size < 0) return 78;
+  *outsize = (size_t)size;
+  *out = (unsigned char*)lodepng_malloc((size_t)size);
+  if(!(*out) && size > 0) return 83; /*the above malloc failed*/
+  if(fread(*out, 1, *outsize, file) != *outsize) return 78;
+  return 0; /*ok*/
 }
 
 unsigned lodepng_load_file(unsigned char** out, size_t* outsize, const char* filename) {
-  long size = lodepng_filesize(filename);
-  if(size < 0) return 78;
-  *outsize = (size_t)size;
-
-  *out = (unsigned char*)lodepng_malloc((size_t)size);
-  if(!(*out) && size > 0) return 83; /*the above malloc failed*/
-
-  return lodepng_buffer_file(*out, (size_t)size, filename);
+  unsigned error;
+  FILE* file = fopen(filename, "rb");
+  if(!file) return 78;
+  error = lodepng_load_file_(out, outsize, file);
+  fclose(file);
+  return error;
 }
 
 /*write given buffer to the file, overwriting the file, it doesn't append to it.*/
 unsigned lodepng_save_file(const unsigned char* buffer, size_t buffersize, const char* filename) {
-  FILE* file;
-  file = fopen(filename, "wb" );
+  FILE* file = fopen(filename, "wb" );
   if(!file) return 79;
   fwrite(buffer, 1, buffersize, file);
   fclose(file);
@@ -2748,11 +2733,29 @@ unsigned char lodepng_chunk_type_equals(const unsigned char* chunk, const char* 
   return (chunk[4] == type[0] && chunk[5] == type[1] && chunk[6] == type[2] && chunk[7] == type[3]);
 }
 
+/* chunk type name must exist only out of alphabetic characters a-z or A-Z */
+static unsigned char lodepng_chunk_type_name_valid(const unsigned char* chunk) {
+  unsigned i;
+  for(i = 0; i != 4; ++i) {
+    char c = (char)chunk[4 + i];
+    if(!((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'))) {
+      return 0; /* not valid */
+    }
+  }
+  return 1; /* valid */
+}
+
 unsigned char lodepng_chunk_ancillary(const unsigned char* chunk) {
   return((chunk[4] & 32) != 0);
 }
 
 unsigned char lodepng_chunk_private(const unsigned char* chunk) {
+  return((chunk[5] & 32) != 0);
+}
+
+/* this is an error if it is reserved: the third character must be uppercase in the PNG standard,
+lowercasing this character is reserved for possible future extension by the spec*/
+static unsigned char lodepng_chunk_reserved(const unsigned char* chunk) {
   return((chunk[6] & 32) != 0);
 }
 
@@ -2833,6 +2836,13 @@ unsigned lodepng_chunk_append(unsigned char** out, size_t* outsize, const unsign
   unsigned i;
   size_t total_chunk_length, new_length;
   unsigned char *chunk_start, *new_buffer;
+
+  if(!lodepng_chunk_type_name_valid(chunk)) {
+    return 121; /* invalid chunk type name */
+  }
+  if(lodepng_chunk_reserved(chunk)) {
+    return 122; /* invalid third lowercase character */
+  }
 
   if(lodepng_addofl(lodepng_chunk_length(chunk), 12, &total_chunk_length)) return 77;
   if(lodepng_addofl(*outsize, total_chunk_length, &new_length)) return 77;
@@ -5420,6 +5430,13 @@ static void decodeGeneric(unsigned char** out, unsigned* w, unsigned* h,
       if(state->error) break;
 #endif /*LODEPNG_COMPILE_ANCILLARY_CHUNKS*/
     } else /*it's not an implemented chunk type, so ignore it: skip over the data*/ {
+      if(!lodepng_chunk_type_name_valid(chunk)) {
+        CERROR_BREAK(state->error, 121); /* invalid chunk type name */
+      }
+      if(lodepng_chunk_reserved(chunk)) {
+        CERROR_BREAK(state->error, 122); /* invalid third lowercase character */
+      }
+
       /*error: unknown critical chunk (5th bit of first byte of chunk type is 0)*/
       if(!state->decoder.ignore_critical && !lodepng_chunk_ancillary(chunk)) {
         CERROR_BREAK(state->error, 69);
@@ -6994,6 +7011,8 @@ const char* lodepng_error_text(unsigned code) {
     case 118: return "mDCv value out of range";
     case 119: return "invalid mDCv chunk size";
     case 120: return "invalid cLLi chunk size";
+    case 121: return "invalid chunk type name: may only contain [a-zA-Z]";
+    case 122: return "invalid chunk type name: third character must be uppercase";
   }
   return "unknown error code";
 }
@@ -7009,11 +7028,23 @@ const char* lodepng_error_text(unsigned code) {
 namespace lodepng {
 
 #ifdef LODEPNG_COMPILE_DISK
-unsigned load_file(std::vector<unsigned char>& buffer, const std::string& filename) {
-  long size = lodepng_filesize(filename.c_str());
+/* Resizes the vector to the file size and reads the file into it. Returns error code.*/
+static unsigned load_file_(std::vector<unsigned char>& buffer, FILE* file) {
+  long size = lodepng_filesize(file);
   if(size < 0) return 78;
   buffer.resize((size_t)size);
-  return size == 0 ? 0 : lodepng_buffer_file(&buffer[0], (size_t)size, filename.c_str());
+  if(size == 0) return 0; /*ok*/
+  if(fread(&buffer[0], 1, buffer.size(), file) != buffer.size()) return 78;
+  return 0; /*ok*/
+}
+
+unsigned load_file(std::vector<unsigned char>& buffer, const std::string& filename) {
+  unsigned error;
+  FILE* file = fopen(filename.c_str(), "rb");
+  if(!file) return 78;
+  error = load_file_(buffer, file);
+  fclose(file);
+  return error;
 }
 
 /*write given buffer to the file, overwriting the file, it doesn't append to it.*/
