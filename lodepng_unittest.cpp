@@ -143,7 +143,7 @@ git difftool -y
 
 ////////////////////////////////////////////////////////////////////////////////
 
-void fail() {
+static void fail(void) {
   throw 1; //that's how to let a unittest fail
 }
 
@@ -190,7 +190,7 @@ void assertEquals(const T& expected, const U& actual, const std::string& message
 }
 
 // TODO: remove, use only ASSERT_TRUE (it prints line number). Requires adding extra message ability to ASSERT_TRUE
-void assertTrue(bool value, const std::string& message = "") {
+static void assertTrue(bool value, const std::string& message = "") {
   if(!value) {
     std::cout << "Error: expected true. " << "Message: " << message << std::endl;
     fail();
@@ -198,7 +198,7 @@ void assertTrue(bool value, const std::string& message = "") {
 }
 
 //assert that no error
-void assertNoPNGError(unsigned error, const std::string& message = "") {
+static void assertNoPNGError(unsigned error, const std::string& message = "") {
   if(error) {
     std::string msg = (message == "") ? lodepng_error_text(error)
                                       : message + std::string(": ") + lodepng_error_text(error);
@@ -206,7 +206,7 @@ void assertNoPNGError(unsigned error, const std::string& message = "") {
   }
 }
 
-void assertNoError(unsigned error) {
+static void assertNoError(unsigned error) {
   if(error) {
     assertEquals(0, error, "Expected no error");
   }
@@ -280,7 +280,7 @@ void toBase64(T& out, const U& in) {
   }
 }
 
-int fromBase64(int v) {
+static int fromBase64(int v) {
   if(v >= 'A' && v <= 'Z') return (v - 'A');
   if(v >= 'a' && v <= 'z') return (v - 'a' + 26);
   if(v >= '0' && v <= '9') return (v - '0' + 52);
@@ -300,7 +300,7 @@ void fromBase64(T& out, const U& in) {
   }
 }
 
-unsigned getRandom() {
+static unsigned getRandom(void) {
   static unsigned s = 1000000000;
   // xorshift32, good enough for testing
   s ^= (s << 13);
@@ -312,12 +312,12 @@ unsigned getRandom() {
 ////////////////////////////////////////////////////////////////////////////////
 
 
-unsigned leftrotate(unsigned x, unsigned c) {
+static unsigned leftrotate(unsigned x, unsigned c) {
   return (x << c) | (x >> (32u - c));
 }
 
 // the 128-bit result is output in 4 32-bit integers a0..d0 (to make 16-byte digest: append a0|b0|c0|d0 in little endian)
-void md5sum(const unsigned char* in, size_t size, unsigned* a0, unsigned* b0, unsigned* c0, unsigned* d0) {
+static void md5sum(const unsigned char* in, size_t size, unsigned* a0, unsigned* b0, unsigned* c0, unsigned* d0) {
   ASSERT_EQUALS(4, sizeof(unsigned));
   // per-round shift amounts
   static const unsigned s[64] = {
@@ -392,7 +392,7 @@ void md5sum(const unsigned char* in, size_t size, unsigned* a0, unsigned* b0, un
   }
 }
 
-std::string md5sum(const unsigned char* data, size_t size) {
+static std::string md5sum(const unsigned char* data, size_t size) {
   unsigned a0, b0, c0, d0;
   md5sum(data, size, &a0, &b0, &c0, &d0);
   char result[33];
@@ -405,7 +405,7 @@ std::string md5sum(const unsigned char* data, size_t size) {
   return std::string(result);
 }
 
-std::string md5sum(const std::vector<unsigned char>& in) {
+static std::string md5sum(const std::vector<unsigned char>& in) {
   return md5sum(in.data(), in.size());
 }
 
@@ -421,7 +421,7 @@ struct Image {
 };
 
 //Get number of color channels for a given PNG color type
-unsigned getNumColorChannels(unsigned colorType) {
+static unsigned getNumColorChannels(unsigned colorType) {
   switch(colorType) {
     case 0: return 1; /*gray*/
     case 2: return 3; /*RGB*/
@@ -434,7 +434,7 @@ unsigned getNumColorChannels(unsigned colorType) {
 
 //Generate a test image with some data in it, the contents of the data is unspecified,
 //except the content is not just one plain color, and not true random either to be compressible.
-void generateTestImage(Image& image, unsigned width, unsigned height, LodePNGColorType colorType = LCT_RGBA, unsigned bitDepth = 8) {
+static void generateTestImage(Image& image, unsigned width, unsigned height, LodePNGColorType colorType = LCT_RGBA, unsigned bitDepth = 8) {
   image.width = width;
   image.height = height;
   image.colorType = colorType;
@@ -452,7 +452,7 @@ void generateTestImage(Image& image, unsigned width, unsigned height, LodePNGCol
 //Generate a 16-bit test image with minimal size that requires at minimum the given color type (bit depth, grayscaleness, ...)
 //If key is true, makes it such that exactly one color is transparent, so it can use a key. If false, adds a translucent color depending on
 //whether it's an alpha color type or not.
-void generateTestImageRequiringColorType16(Image& image, LodePNGColorType colorType, unsigned bitDepth, bool key) {
+static void generateTestImageRequiringColorType16(Image& image, LodePNGColorType colorType, unsigned bitDepth, bool key) {
   image.colorType = colorType;
   image.bitDepth = bitDepth;
   unsigned w = 1;
@@ -522,7 +522,7 @@ void generateTestImageRequiringColorType16(Image& image, LodePNGColorType colorT
 //Generate a 8-bit test image with minimal size that requires at minimum the given color type (bit depth, grayscaleness, ...). bitDepth max 8 here.
 //If key is true, makes it such that exactly one color is transparent, so it can use a key. If false, adds a translucent color depending on
 //whether it's an alpha color type or not.
-void generateTestImageRequiringColorType8(Image& image, LodePNGColorType colorType, unsigned bitDepth, bool key) {
+static void generateTestImageRequiringColorType8(Image& image, LodePNGColorType colorType, unsigned bitDepth, bool key) {
   image.colorType = colorType;
   image.bitDepth = bitDepth;
   unsigned w = 1;
@@ -577,7 +577,7 @@ void generateTestImageRequiringColorType8(Image& image, LodePNGColorType colorTy
 }
 
 //Check that the decoded PNG pixels are the same as the pixels in the image
-void assertPixels(Image& image, const unsigned char* decoded, const std::string& message) {
+static void assertPixels(Image& image, const unsigned char* decoded, const std::string& message) {
   for(size_t i = 0; i < image.data.size(); i++) {
     int byte_expected = image.data[i];
     int byte_actual = decoded[i];
@@ -600,7 +600,7 @@ void assertPixels(Image& image, const unsigned char* decoded, const std::string&
 }
 
 //Test LodePNG encoding and decoding the encoded result, using the C interface
-void doCodecTestC(Image& image) {
+static void doCodecTestC(Image& image) {
   unsigned char* encoded = 0;
   size_t encoded_size = 0;
   unsigned char* decoded = 0;
@@ -635,7 +635,7 @@ void doCodecTestC(Image& image) {
 }
 
 //Test LodePNG encoding and decoding the encoded result, using the C++ interface
-void doCodecTestCPP(Image& image) {
+static void doCodecTestCPP(Image& image) {
   std::vector<unsigned char> encoded;
   std::vector<unsigned char> decoded;
   unsigned decoded_w;
@@ -660,7 +660,7 @@ void doCodecTestCPP(Image& image) {
 }
 
 
-void doCodecTestWithEncState(Image& image, lodepng::State& state) {
+static void doCodecTestWithEncState(Image& image, lodepng::State& state) {
   std::vector<unsigned char> encoded;
   std::vector<unsigned char> decoded;
   unsigned decoded_w;
@@ -684,19 +684,19 @@ void doCodecTestWithEncState(Image& image, lodepng::State& state) {
 
 
 //Test LodePNG encoding and decoding the encoded result, using the C++ interface
-void doCodecTestUncompressed(Image& image) {
+static void doCodecTestUncompressed(Image& image) {
   lodepng::State state;
   state.encoder.zlibsettings.btype = 0;
   doCodecTestWithEncState(image, state);
 }
 
-void doCodecTestNoLZ77(Image& image) {
+static void doCodecTestNoLZ77(Image& image) {
   lodepng::State state;
   state.encoder.zlibsettings.use_lz77 = 0;
   doCodecTestWithEncState(image, state);
 }
 
-void testGetFilterTypes() {
+static void testGetFilterTypes(void) {
   std::cout << "testGetFilterTypes" << std::endl;
   // Test that getFilterTypes works on the special case of 1-pixel wide interlaced image
   std::string png64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAAHCAIAAAExKYBVAAAAHUlEQVR4ASXHAQoAAAjCwPX/R9tK4ZBN4EHKcPcLXCgGAQa0TV8AAAAASUVORK5CYII=";
@@ -715,7 +715,7 @@ void testGetFilterTypes() {
 }
 
 //Test LodePNG encoding and decoding the encoded result, using the C++ interface, with interlace
-void doCodecTestInterlaced(Image& image) {
+static void doCodecTestInterlaced(Image& image) {
   std::vector<unsigned char> encoded;
   std::vector<unsigned char> decoded;
   unsigned decoded_w;
@@ -746,7 +746,7 @@ void doCodecTestInterlaced(Image& image) {
 }
 
 //Test LodePNG encoding and decoding the encoded result
-void doCodecTest(Image& image) {
+static void doCodecTest(Image& image) {
   doCodecTestC(image);
   doCodecTestCPP(image);
   doCodecTestInterlaced(image);
@@ -756,20 +756,20 @@ void doCodecTest(Image& image) {
 
 
 //Test LodePNG encoding and decoding using some image generated with the given parameters
-void codecTest(unsigned width, unsigned height, LodePNGColorType colorType = LCT_RGBA, unsigned bitDepth = 8) {
+static void codecTest(unsigned width, unsigned height, LodePNGColorType colorType = LCT_RGBA, unsigned bitDepth = 8) {
   std::cout << "codec test " << width << " " << height << std::endl;
   Image image;
   generateTestImage(image, width, height, colorType, bitDepth);
   doCodecTest(image);
 }
 
-std::string removeSpaces(const std::string& s) {
+static std::string removeSpaces(const std::string& s) {
   std::string result;
   for(size_t i = 0; i < s.size(); i++) if(s[i] != ' ') result += s[i];
   return result;
 }
 
-void bitStringToBytes(std::vector<unsigned char>& bytes, const std::string& bits_) {
+static void bitStringToBytes(std::vector<unsigned char>& bytes, const std::string& bits_) {
   std::string bits = removeSpaces(bits_);
   bytes.resize((bits.size()) + 7 / 8);
   for(size_t i = 0; i < bits.size(); i++) {
@@ -786,7 +786,7 @@ test color convert on a single pixel. Testing palette and testing color keys is
 not supported by this function. Pixel values given using bits in an std::string
 of 0's and 1's.
 */
-void colorConvertTest(const std::string& bits_in, LodePNGColorType colorType_in, unsigned bitDepth_in,
+static void colorConvertTest(const std::string& bits_in, LodePNGColorType colorType_in, unsigned bitDepth_in,
                       const std::string& bits_out, LodePNGColorType colorType_out, unsigned bitDepth_out) {
   std::cout << "color convert test " << bits_in << " - " << bits_out << std::endl;
 
@@ -813,7 +813,7 @@ void colorConvertTest(const std::string& bits_in, LodePNGColorType colorType_in,
   lodepng_color_mode_cleanup(&mode_out);
 }
 
-void testOtherPattern1() {
+static void testOtherPattern1(void) {
   std::cout << "codec other pattern 1" << std::endl;
 
   Image image1;
@@ -836,7 +836,7 @@ void testOtherPattern1() {
   doCodecTest(image1);
 }
 
-void testOtherPattern2() {
+static void testOtherPattern2(void) {
   std::cout << "codec other pattern 2" << std::endl;
 
   Image image1;
@@ -858,7 +858,7 @@ void testOtherPattern2() {
   doCodecTest(image1);
 }
 
-void testSinglePixel(int r, int g, int b, int a) {
+static void testSinglePixel(int r, int g, int b, int a) {
   std::cout << "codec single pixel " << r << " " << g << " " << b << " " << a << std::endl;
   Image pixel;
   pixel.width = 1;
@@ -874,7 +874,7 @@ void testSinglePixel(int r, int g, int b, int a) {
   doCodecTest(pixel);
 }
 
-void testColor(int r, int g, int b, int a) {
+static void testColor(int r, int g, int b, int a) {
   std::cout << "codec test color " << r << " " << g << " " << b << " " << a << std::endl;
   Image image;
   image.width = 20;
@@ -918,7 +918,7 @@ void testColor(int r, int g, int b, int a) {
 }
 
 // Tests combinations of various colors in different orders
-void testFewColors() {
+static void testFewColors(void) {
   std::cout << "codec test few colors " << std::endl;
   Image image;
   image.width = 4;
@@ -965,7 +965,7 @@ void testFewColors() {
   }
 }
 
-void testSize(unsigned w, unsigned h) {
+static void testSize(unsigned w, unsigned h) {
   std::cout << "codec test size " << w << " " << h << std::endl;
   Image image;
   image.width = w;
@@ -1030,7 +1030,7 @@ void testPNGCodec() {
 }
 
 //Tests some specific color conversions with specific color bit combinations
-void testColorConvert() {
+static void testColorConvert(void) {
   //test color conversions to RGBA8
   colorConvertTest("1", LCT_GREY, 1, "11111111 11111111 11111111 11111111", LCT_RGBA, 8);
   colorConvertTest("10", LCT_GREY, 2, "10101010 10101010 10101010 11111111", LCT_RGBA, 8);
@@ -1080,7 +1080,7 @@ void testColorConvert() {
 
 //This tests color conversions from any color model to any color model, with any bit depth
 //But it tests only with colors black and white, because that are the only colors every single model supports
-void testColorConvert2() {
+static void testColorConvert2(void) {
   std::cout << "testColorConvert2" << std::endl;
   struct Combo {
     LodePNGColorType colortype;
@@ -1149,7 +1149,7 @@ void testColorConvert2() {
 }
 
 //if compressible is true, the test will also assert that the compressed string is smaller
-void testCompressStringZlib(const std::string& text, bool compressible) {
+static void testCompressStringZlib(const std::string& text, bool compressible) {
   if(text.size() < 500) std::cout << "compress test with text: " << text << std::endl;
   else std::cout << "compress test with text length: " << text.size() << std::endl;
 
@@ -1175,7 +1175,7 @@ void testCompressStringZlib(const std::string& text, bool compressible) {
   free(out2);
 }
 
-void testCompressZlib() {
+static void testCompressZlib(void) {
   testCompressStringZlib("", false);
   testCompressStringZlib("a", false);
   testCompressStringZlib("aa", false);
@@ -1194,7 +1194,7 @@ void testCompressZlib() {
   testCompressStringZlib("lodepng_zlib_decompress(&out2, &outsize2, out, outsize, &lodepng_default_decompress_settings);", true);
 }
 
-void testDiskCompressZlib(const std::string& filename) {
+static void testDiskCompressZlib(const std::string& filename) {
   std::cout << "testDiskCompressZlib: File " << filename << std::endl;
 
   std::vector<unsigned char> buffer;
@@ -1204,7 +1204,7 @@ void testDiskCompressZlib(const std::string& filename) {
   testCompressStringZlib(f, false);
 }
 
-void testDiskPNG(const std::string& filename) {
+static void testDiskPNG(const std::string& filename) {
   std::cout << "testDiskPNG: File " << filename << std::endl;
 
   Image image;
@@ -1216,7 +1216,7 @@ void testDiskPNG(const std::string& filename) {
   doCodecTest(image);
 }
 
-std::vector<unsigned> strtovector(const std::string& numbers) {
+static std::vector<unsigned> strtovector(const std::string& numbers) {
   std::vector<unsigned> result;
   std::stringstream ss(numbers);
   unsigned i;
@@ -1224,7 +1224,7 @@ std::vector<unsigned> strtovector(const std::string& numbers) {
   return result;
 }
 
-void doTestHuffmanCodeLengths(const std::string& expectedstr, const std::string& counts, size_t bitlength) {
+static void doTestHuffmanCodeLengths(const std::string& expectedstr, const std::string& counts, size_t bitlength) {
   std::vector<unsigned> expected = strtovector(expectedstr);
   std::vector<unsigned> count = strtovector(counts);
   std::cout << "doTestHuffmanCodeLengths: " << counts << std::endl;
@@ -1239,7 +1239,7 @@ void doTestHuffmanCodeLengths(const std::string& expectedstr, const std::string&
   assertEquals(ss1.str(), ss2.str(), "value");
 }
 
-void testHuffmanCodeLengths() {
+static void testHuffmanCodeLengths(void) {
   bool atleasttwo = true; //LodePNG generates at least two, instead of at least one, symbol
   if(atleasttwo) {
     doTestHuffmanCodeLengths("1 1", "0 0", 16);
@@ -1271,7 +1271,7 @@ void testHuffmanCodeLengths() {
 Create a PNG image with all known chunks (except only one of tEXt or zTXt) plus
 unknown chunks, and a palette.
 */
-void createComplexPNG(std::vector<unsigned char>& png) {
+static void createComplexPNG(std::vector<unsigned char>& png) {
   unsigned w = 16, h = 17;
   std::vector<unsigned char> image(w * h);
   for(size_t i = 0; i < w * h; i++) {
@@ -1323,7 +1323,7 @@ void createComplexPNG(std::vector<unsigned char>& png) {
   ASSERT_NO_PNG_ERROR(error);
 }
 
-std::string extractChunkNames(const std::vector<unsigned char>& png) {
+static std::string extractChunkNames(const std::vector<unsigned char>& png) {
   const unsigned char* chunk = &png[8];
   const unsigned char* end = &png.back() + 1;
   char name[5];
@@ -1338,7 +1338,7 @@ std::string extractChunkNames(const std::vector<unsigned char>& png) {
   return result;
 }
 
-void testComplexPNG() {
+static void testComplexPNG(void) {
   std::cout << "testComplexPNG" << std::endl;
 
   std::vector<unsigned char> png;
@@ -1412,7 +1412,7 @@ void testComplexPNG() {
 }
 
 // Tests lodepng_inspect_chunk, and also lodepng_chunk_find to find the chunk to inspect
-void testInspectChunk() {
+static void testInspectChunk(void) {
   std::cout << "testInspectChunk" << std::endl;
 
   std::vector<unsigned char> png;
@@ -1445,7 +1445,7 @@ void testInspectChunk() {
 }
 
 //test that, by default, it chooses filter type zero for all scanlines if the image has a palette
-void testPaletteFilterTypesZero() {
+static void testPaletteFilterTypesZero(void) {
   std::cout << "testPaletteFilterTypesZero" << std::endl;
 
   std::vector<unsigned char> png;
@@ -1459,7 +1459,7 @@ void testPaletteFilterTypesZero() {
 }
 
 //tests that there are no crashes with auto color chooser in case of palettes with translucency etc...
-void testPaletteToPaletteConvert() {
+static void testPaletteToPaletteConvert(void) {
   std::cout << "testPaletteToPaletteConvert" << std::endl;
   unsigned error;
   unsigned w = 16, h = 16;
@@ -1469,7 +1469,7 @@ void testPaletteToPaletteConvert() {
   LodePNGInfo& info = state.info_png;
   info.color.colortype = state.info_raw.colortype = LCT_PALETTE;
   info.color.bitdepth = state.info_raw.bitdepth = 8;
-  ASSERT_EQUALS(true, state.encoder.auto_convert);
+  ASSERT_EQUALS(true, !!state.encoder.auto_convert);
   for(size_t i = 0; i < 256; i++) {
     lodepng_palette_add(&info.color, i, i, i, i);
   }
@@ -1483,7 +1483,7 @@ void testPaletteToPaletteConvert() {
 
 //for this test, you have to choose palette colors that cause LodePNG to actually use a palette,
 //so don't use all grayscale colors for example
-void doRGBAToPaletteTest(unsigned char* palette, size_t size, LodePNGColorType expectedType = LCT_PALETTE) {
+static void doRGBAToPaletteTest(unsigned char* palette, size_t size, LodePNGColorType expectedType = LCT_PALETTE) {
   std::cout << "testRGBToPaletteConvert " << size << std::endl;
   unsigned error;
   unsigned w = size, h = 257 /*LodePNG encodes no palette if image is too small*/;
@@ -1507,7 +1507,7 @@ void doRGBAToPaletteTest(unsigned char* palette, size_t size, LodePNGColorType e
   }
 }
 
-void testRGBToPaletteConvert() {
+static void testRGBToPaletteConvert(void) {
   unsigned char palette1[4] = {1,2,3,4};
   doRGBAToPaletteTest(palette1, 1);
   unsigned char palette2[8] = {1,2,3,4, 5,6,7,8};
@@ -1530,7 +1530,7 @@ void testRGBToPaletteConvert() {
   doRGBAToPaletteTest(&palette[0], 257, LCT_RGBA);
 }
 
-void testColorKeyConvert() {
+static void testColorKeyConvert(void) {
   std::cout << "testColorKeyConvert" << std::endl;
   unsigned error;
   unsigned w = 32, h = 32;
@@ -1561,7 +1561,7 @@ void testColorKeyConvert() {
   }
 }
 
-void testNoAutoConvert() {
+static void testNoAutoConvert(void) {
   std::cout << "testNoAutoConvert" << std::endl;
   unsigned error;
   unsigned w = 32, h = 32;
@@ -1594,14 +1594,14 @@ void testNoAutoConvert() {
   }
 }
 
-unsigned char flipBit(unsigned char c, int bitpos) {
+static unsigned char flipBit(unsigned char c, int bitpos) {
   return c ^ (1 << bitpos);
 }
 
 //Test various broken inputs. Returned errors are not checked, what is tested is
 //that is doesn't crash, and, when run with valgrind, no memory warnings are
 //given.
-void testFuzzing() {
+static void testFuzzing(void) {
   std::cout << "testFuzzing" << std::endl;
   std::vector<unsigned char> png;
   createComplexPNG(png);
@@ -1641,9 +1641,9 @@ void testFuzzing() {
   std::cout << std::endl;
 }
 
-int custom_proof = 0; // global variable for nested function to call. Of course when this test is switched to modern C++ we can use a lamba instead.
+static int custom_proof = 0; // global variable for nested function to call. Of course when this test is switched to modern C++ we can use a lamba instead.
 
-void testCustomZlibCompress() {
+static void testCustomZlibCompress(void) {
   std::cout << "testCustomZlibCompress" << std::endl;
   Image image;
   generateTestImage(image, 5, 5, LCT_RGBA, 8);
@@ -1672,7 +1672,7 @@ void testCustomZlibCompress() {
   ASSERT_EQUALS(111, error); // expect a known lodepng error, not the custom 5555
 }
 
-void testCustomZlibCompress2() {
+static void testCustomZlibCompress2(void) {
   std::cout << "testCustomZlibCompress2" << std::endl;
   Image image;
   generateTestImage(image, 5, 5, LCT_RGBA, 8);
@@ -1696,7 +1696,7 @@ void testCustomZlibCompress2() {
   ASSERT_EQUALS(5, h);
 }
 
-void testCustomDeflate() {
+static void testCustomDeflate(void) {
   std::cout << "testCustomDeflate" << std::endl;
   Image image;
   generateTestImage(image, 5, 5, LCT_RGBA, 8);
@@ -1725,7 +1725,7 @@ void testCustomDeflate() {
   ASSERT_EQUALS(111, error); // expect a known lodepng error, not the custom 5555
 }
 
-void testCustomZlibDecompress() {
+static void testCustomZlibDecompress(void) {
   std::cout << "testCustomZlibDecompress" << std::endl;
   Image image;
   generateTestImage(image, 5, 5, LCT_RGBA, 8);
@@ -1763,7 +1763,7 @@ void testCustomZlibDecompress() {
   ASSERT_EQUALS(110, error);
 }
 
-void testCustomInflate() {
+static void testCustomInflate(void) {
   std::cout << "testCustomInflate" << std::endl;
   Image image;
   generateTestImage(image, 5, 5, LCT_RGBA, 8);
@@ -1802,7 +1802,7 @@ void testCustomInflate() {
 }
 
 
-void testChunkUtil() {
+static void testChunkUtil(void) {
   std::cout << "testChunkUtil" << std::endl;
   std::vector<unsigned char> png;
   createComplexPNG(png);
@@ -1832,7 +1832,7 @@ void testChunkUtil() {
 
 //Test that when decoding to 16-bit per channel, it always uses big endian consistently.
 //It should always output big endian, the convention used inside of PNG, even though x86 CPU's are little endian.
-void test16bitColorEndianness() {
+static void test16bitColorEndianness(void) {
   std::cout << "test16bitColorEndianness" << std::endl;
 
   //basn0g16.png from the PNG test suite
@@ -1899,7 +1899,7 @@ void test16bitColorEndianness() {
   ASSERT_EQUALS(0x77, image[85]);
 }
 
-void testPredefinedFilters() {
+static void testPredefinedFilters(void) {
   size_t w = 32, h = 32;
   std::cout << "testPredefinedFilters" << std::endl;
   Image image;
@@ -1924,7 +1924,7 @@ void testPredefinedFilters() {
   for(size_t i = 0; i < h; i++) ASSERT_EQUALS(3, outfilters[i]);
 }
 
-void testEncoderErrors() {
+static void testEncoderErrors(void) {
   std::cout << "testEncoderErrors" << std::endl;
 
   std::vector<unsigned char> png;
@@ -1979,14 +1979,14 @@ void testEncoderErrors() {
   ASSERT_EQUALS(61, lodepng::encode(png, &image.data[0], w, h, state));
 }
 
-void addColor(std::vector<unsigned char>& colors, unsigned char r, unsigned char g, unsigned char b, unsigned char a) {
+static void addColor(std::vector<unsigned char>& colors, unsigned char r, unsigned char g, unsigned char b, unsigned char a) {
   colors.push_back(r);
   colors.push_back(g);
   colors.push_back(b);
   colors.push_back(a);
 }
 
-void addColor16(std::vector<unsigned char>& colors, unsigned short r, unsigned short g, unsigned short b, unsigned short a) {
+static void addColor16(std::vector<unsigned char>& colors, unsigned short r, unsigned short g, unsigned short b, unsigned short a) {
   colors.push_back(r & 255);
   colors.push_back((r >> 8) & 255);
   colors.push_back(g & 255);
@@ -2000,7 +2000,7 @@ void addColor16(std::vector<unsigned char>& colors, unsigned short r, unsigned s
 // Tests auto_convert
 // colors is in RGBA, inbitdepth must be 8 or 16, the amount of bits per channel.
 // colortype and bitdepth are the expected values. insize is amount of pixels. So the amount of bytes is insize * 4 * (inbitdepth / 8)
-void testAutoColorModel(const std::vector<unsigned char>& colors, unsigned inbitdepth, LodePNGColorType colortype, unsigned bitdepth, bool key) {
+static void testAutoColorModel(const std::vector<unsigned char>& colors, unsigned inbitdepth, LodePNGColorType colortype, unsigned bitdepth, bool key) {
   std::cout << "testAutoColorModel " << inbitdepth << " " << colortype << " " << bitdepth << " " << key << std::endl;
   size_t innum = colors.size() / 4 * inbitdepth / 8;
   size_t num = innum < 65536 ? 65536 : innum; // Make image bigger so the convert doesn't avoid palette due to small image.
@@ -2019,13 +2019,13 @@ void testAutoColorModel(const std::vector<unsigned char>& colors, unsigned inbit
   ASSERT_EQUALS(1, h);
   ASSERT_EQUALS(colortype, state.info_png.color.colortype);
   ASSERT_EQUALS(bitdepth, state.info_png.color.bitdepth);
-  ASSERT_EQUALS(key, state.info_png.color.key_defined);
+  ASSERT_EQUALS(key, !!state.info_png.color.key_defined);
   // also check that the PNG decoded correctly and has same colors as input
   if(inbitdepth == 8) { for(size_t i = 0; i < colors.size(); i++) ASSERT_EQUALS(colors[i], decoded[i]); }
   else { for(size_t i = 0; i < colors.size() / 2; i++) ASSERT_EQUALS(colors[i * 2], decoded[i]); }
 }
 
-void testAutoColorModels() {
+static void testAutoColorModels(void) {
   // 1-bit gray
   std::vector<unsigned char> gray1;
   for(size_t i = 0; i < 2; i++) addColor(gray1, i * 255, i * 255, i * 255, 255);
@@ -2175,7 +2175,7 @@ void testAutoColorModels() {
   testAutoColorModel(gray1k, 8, LCT_PALETTE, 2, false);
 }
 
-void testPaletteToPaletteDecode() {
+static void testPaletteToPaletteDecode(void) {
   std::cout << "testPaletteToPaletteDecode" << std::endl;
   // It's a bit big for a 2x2 image... but this tests needs one with 256 palette entries in it.
   std::string base64 = "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAMAAABFaP0WAAAAA3NCSVQICAjb4U/gAAADAFBMVEUA"
@@ -2215,7 +2215,7 @@ void testPaletteToPaletteDecode() {
 }
 
 //2-bit palette
-void testPaletteToPaletteDecode2() {
+static void testPaletteToPaletteDecode2(void) {
   std::cout << "testPaletteToPaletteDecode2" << std::endl;
   std::string base64 = "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgAgMAAAAOFJJnAAAADFBMVEX/AAAA/wAAAP/////7AGD2AAAAE0lEQVR4AWMQhAKG3VCALDIqAgDl2WYBCQHY9gAAAABJRU5ErkJggg==";
   std::vector<unsigned char> png;
@@ -2246,7 +2246,7 @@ void testPaletteToPaletteDecode2() {
   free(image2);
 }
 
-void assertColorProfileDataEqual(const lodepng::State& a, const lodepng::State& b) {
+static void assertColorProfileDataEqual(const lodepng::State& a, const lodepng::State& b) {
   ASSERT_EQUALS(a.info_png.gama_defined, b.info_png.gama_defined);
   if(a.info_png.gama_defined) {
     ASSERT_EQUALS(a.info_png.gama_gamma, b.info_png.gama_gamma);
@@ -2308,7 +2308,7 @@ void assertColorProfileDataEqual(const lodepng::State& a, const lodepng::State& 
 }
 
 // Tests the gAMA, cHRM, sRGB, iCCP chunks
-void testColorProfile() {
+static void testColorProfile(void) {
   std::cout << "testColorProfile" << std::endl;
   {
     unsigned error;
@@ -2570,7 +2570,7 @@ void testColorProfile() {
   }
 }
 
-void assertExifDataEqual(const lodepng::State& a, const lodepng::State& b) {
+static void assertExifDataEqual(const lodepng::State& a, const lodepng::State& b) {
   ASSERT_EQUALS(a.info_png.exif_defined, b.info_png.exif_defined);
   if(!a.info_png.exif_defined) return;
 
@@ -2580,7 +2580,7 @@ void assertExifDataEqual(const lodepng::State& a, const lodepng::State& b) {
   }
 }
 
-void testExif() {
+static void testExif(void) {
   std::cout << "testExif" << std::endl;
 
   {
@@ -2625,7 +2625,7 @@ void testExif() {
 // r, g, b is input background color to encoder, given in png color model
 // r2, g2, b2 is expected decoded background color, in color model it auto chose if auto_convert is on
 // pixels must be given in mode_raw color format
-void testBkgdChunk(unsigned r, unsigned g, unsigned b,
+static void testBkgdChunk(unsigned r, unsigned g, unsigned b,
                    unsigned r2, unsigned g2, unsigned b2,
                    const std::vector<unsigned char>& pixels,
                    unsigned w, unsigned h,
@@ -2682,7 +2682,7 @@ void testBkgdChunk(unsigned r, unsigned g, unsigned b,
 
 // r, g, b is input background color to encoder, given in png color model
 // r2, g2, b2 is expected decoded background color, in color model it auto chose if auto_convert is on
-void testBkgdChunk(unsigned r, unsigned g, unsigned b,
+static void testBkgdChunk(unsigned r, unsigned g, unsigned b,
                    unsigned r2, unsigned g2, unsigned b2,
                    LodePNGColorType type_pixels, unsigned bitdepth_pixels,
                    LodePNGColorType type_raw, unsigned bitdepth_raw,
@@ -2705,7 +2705,7 @@ void testBkgdChunk(unsigned r, unsigned g, unsigned b,
                 mode_raw, mode_png, auto_convert, expect_encoder_error);
 }
 
-void testBkgdChunk() {
+static void testBkgdChunk(void) {
   std::cout << "testBkgdChunk" << std::endl;
   // color param order is: generated, raw, png ( == bKGD)
   // here generated means: what color values the pixels will get, so what auto_convert will make it choose
@@ -2764,7 +2764,7 @@ void testBkgdChunk() {
   }
 }
 
-void testBkgdChunk2() {
+static void testBkgdChunk2(void) {
   std::cout << "testBkgdChunk2" << std::endl;
   Image image;
   generateTestImageRequiringColorType8(image, LCT_GREY, 2, false);
@@ -2812,7 +2812,7 @@ void testBkgdChunk2() {
 }
 
 // r, g, b, a are the bit depths to store
-void testSbitChunk(unsigned r, unsigned g, unsigned b, unsigned a,
+static void testSbitChunk(unsigned r, unsigned g, unsigned b, unsigned a,
                    const std::vector<unsigned char>& pixels,
                    unsigned w, unsigned h,
                    const LodePNGColorMode& mode_raw,
@@ -2885,7 +2885,7 @@ void testSbitChunk(unsigned r, unsigned g, unsigned b, unsigned a,
 }
 
 
-void testSbitChunk(unsigned r, unsigned g, unsigned b, unsigned a,
+static void testSbitChunk(unsigned r, unsigned g, unsigned b, unsigned a,
                    LodePNGColorType type, unsigned bitdepth,
                    bool expect_encoder_error = false) {
   LodePNGColorMode mode_raw;
@@ -2907,7 +2907,7 @@ void testSbitChunk(unsigned r, unsigned g, unsigned b, unsigned a,
 // type_raw = actual raw pixel type to give to the encoder
 // type_png = PNG type to request from the encoder (if not auto_convert)
 // auto_convert: 0 = no, 1 = yes, 2 = try both
-void testSbitChunk2(unsigned r, unsigned g, unsigned b, unsigned a,
+static void testSbitChunk2(unsigned r, unsigned g, unsigned b, unsigned a,
                    LodePNGColorType type_pixels, unsigned bitdepth_pixels,
                    LodePNGColorType type_raw, unsigned bitdepth_raw,
                    LodePNGColorType type_png, unsigned bitdepth_png,
@@ -2932,7 +2932,7 @@ void testSbitChunk2(unsigned r, unsigned g, unsigned b, unsigned a,
 
 // Test the sBIT chunk for all color types, and for possible combinations of pixel colors where auto_convert conversions occur (only conversions that
 // still allow storing all the sBIT information within the PNG specification limitations may occur)
-void testSbitChunk() {
+static void testSbitChunk(void) {
   std::cout << "testSbitChunk" << std::endl;
   testSbitChunk(8, 8, 8, 0, LCT_RGB, 8, false);
   testSbitChunk(1, 2, 3, 0, LCT_RGB, 8, false);
@@ -3030,7 +3030,7 @@ void testSbitChunk() {
 // wx..by = whitepoint and chromaticities, given in the 100000x multiplied form of PNG
 // r, g, b: r, g, b values to encode in the PNG's data
 // er, eg, eb: expected r, g, b values after decoding and converting to sRGB
-void testChrmToSrgb(unsigned gamma, unsigned wx, unsigned wy, unsigned rx, unsigned ry, unsigned gx, unsigned gy, unsigned bx, unsigned by,
+static void testChrmToSrgb(unsigned gamma, unsigned wx, unsigned wy, unsigned rx, unsigned ry, unsigned gx, unsigned gy, unsigned bx, unsigned by,
                     unsigned char r, unsigned char g, unsigned char b, unsigned char er, unsigned char eg, unsigned char eb,
                     int max_dist = 0) {
   std::vector<unsigned char> image(4);
@@ -3082,7 +3082,7 @@ void testChrmToSrgb(unsigned gamma, unsigned wx, unsigned wy, unsigned rx, unsig
   }
 }
 
-void testChrmToSrgb() {
+static void testChrmToSrgb(void) {
   std::cout << "testChrmToSrgb" << std::endl;
   // srgb gamma approximation and chromaticities defined as standard by png (multiplied by 100000)
   unsigned sg = 45455; // srgb gamma approximation
@@ -3126,7 +3126,7 @@ void testChrmToSrgb() {
 
 
 
-void testXYZ() {
+static void testXYZ(void) {
   std::cout << "testXYZ" << std::endl;
   unsigned w = 512, h = 512;
   std::vector<unsigned char> v(w * h * 4 * 2);
@@ -3244,7 +3244,7 @@ void testXYZ() {
 }
 
 
-void testICC() {
+static void testICC(void) {
   std::cout << "testICC" << std::endl;
   // approximate srgb (gamma function not exact)
   std::string icc_near_srgb_base64 =
@@ -3372,7 +3372,7 @@ void testICC() {
 }
 
 
-void testICCGray() {
+static void testICCGray(void) {
   std::cout << "testICCGray" << std::endl;
   // Grayscale, Gamma 2.2, sRGB whitepoint
   std::string icc22_base64 =
@@ -3463,7 +3463,7 @@ void testICCGray() {
 }
 
 // input is base64-encoded png image and base64-encoded RGBA pixels (8 bit per channel)
-void testBase64Image(const std::string& png64, bool expect_error, unsigned expect_w, unsigned expect_h, const std::string& expect_md5) {
+static void testBase64Image(const std::string& png64, bool expect_error, unsigned expect_w, unsigned expect_h, const std::string& expect_md5) {
   std::vector<unsigned char> png, pixels;
   fromBase64(png, png64);
 
@@ -3550,7 +3550,7 @@ void testBase64Image(const std::string& png64, bool expect_error, unsigned expec
   }
 }
 // input is base64-encoded png image and base64-encoded RGBA pixels (8 bit per channel)
-void testPngSuiteImage(const std::string& png64, const std::string& name, bool expect_error, unsigned expect_w, unsigned expect_h, const std::string& expect_md5) {
+static void testPngSuiteImage(const std::string& png64, const std::string& name, bool expect_error, unsigned expect_w, unsigned expect_h, const std::string& expect_md5) {
   std::cout << "testPngSuiteImage: " << name << std::endl;
 
   testBase64Image(png64, expect_error, expect_w, expect_h, expect_md5);
@@ -3558,7 +3558,7 @@ void testPngSuiteImage(const std::string& png64, const std::string& name, bool e
 
 
 // Tests base64-encoded PngSuite images' pixels against expected md5 sum of their pixels
-void testPngSuite() {
+static void testPngSuite() {
   std::cout << "testPngSuite" << std::endl;
   /*
   LICENSE of the PngSuite images:
@@ -3928,13 +3928,13 @@ void testPngSuite() {
 }
 
 
-void testErrorImages() {
+static void testErrorImages() {
   std::cout << "testErrorImages" << std::endl;
   // Image with color type palette but missing PLTE chunk
   testBase64Image("iVBORw0KGgoAAAANSUhEUgAAAQAAAAEAAgMAAAAhHED1AAAAU0lEQVR4Ae3MwQAAAAxFoXnM3/NDvGsBdB8JBAKBQCAQCAQCgUAgEAgEAoFAIBAIBAKBQCAQCAQCgUAgEAgEAoFAIBAIBAKBQCAQCAQCgUAgEEQDHGPAW1eyhK0AAAAASUVORK5CYII=", true, 256, 256, "");
 }
 
-void doMain() {
+static void doMain() {
   //PNG
   testPngSuite();
   testErrorImages();
@@ -3987,7 +3987,14 @@ void doMain() {
   std::cout << "\ntest successful" << std::endl;
 }
 
-int main() {
+
+#include "monolithic_examples.h"
+
+#if defined(BUILD_MONOLITHIC)
+#define main      lodepng_unittest_main
+#endif
+
+int main(void) {
   try {
     doMain();
   }
