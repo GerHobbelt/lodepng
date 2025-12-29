@@ -36,7 +36,7 @@ freely, subject to the following restrictions:
 Example 1
 Decode from disk to raw pixels with a single function call
 */
-void decodeOneStep(const char* filename) {
+static void decodeOneStep(const char* filename) {
   unsigned error;
   unsigned char* image = 0;
   unsigned width, height;
@@ -53,7 +53,7 @@ void decodeOneStep(const char* filename) {
 Example 2
 Load PNG file from disk to memory first, then decode to raw pixels in memory.
 */
-void decodeTwoSteps(const char* filename) {
+static void decodeTwoSteps(const char* filename) {
   unsigned error;
   unsigned char* image = 0;
   unsigned width, height;
@@ -75,7 +75,7 @@ void decodeTwoSteps(const char* filename) {
 Example 3
 Load PNG file from disk using a State, normally needed for more advanced usage.
 */
-void decodeWithState(const char* filename) {
+static void decodeWithState(const char* filename) {
   unsigned error;
   unsigned char* image = 0;
   unsigned width, height;
@@ -99,7 +99,14 @@ void decodeWithState(const char* filename) {
   free(image);
 }
 
-int main(int argc, char *argv[]) {
+
+#include "monolithic_examples.h"
+
+#if defined(BUILD_MONOLITHIC)
+#define main      lodepng_example_decode_c_main
+#endif
+
+int main(int argc, const char** argv) {
   const char* filename = argc > 1 ? argv[1] : "test.png";
 
   decodeOneStep(filename);

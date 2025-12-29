@@ -38,7 +38,7 @@ etc...
 /*
 Display general info about the PNG.
 */
-void displayPNGInfo(const LodePNGInfo& info) {
+static void displayPNGInfo(const LodePNGInfo& info) {
   const LodePNGColorMode& color = info.color;
 
   std::cout << "Compression method: " << info.compression_method << std::endl;
@@ -91,7 +91,7 @@ void displayPNGInfo(const LodePNGInfo& info) {
 /*
 Display the names and sizes of all chunks in the PNG file.
 */
-void displayChunkNames(const std::vector<unsigned char>& buffer) {
+static void displayChunkNames(const std::vector<unsigned char>& buffer) {
   // Listing chunks is based on the original file, not the decoded png info.
   const unsigned char *chunk, *end;
   end = &buffer.back() + 1;
@@ -125,7 +125,7 @@ void displayChunkNames(const std::vector<unsigned char>& buffer) {
 /*
 Show ASCII art preview of the image
 */
-void displayAsciiArt(const std::vector<unsigned char>& image, unsigned w, unsigned h) {
+static void displayAsciiArt(const std::vector<unsigned char>& image, unsigned w, unsigned h) {
   if(w > 0 && h > 0) {
     std::cout << std::endl << "ASCII Art Preview: " << std::endl;
     unsigned w2 = 48;
@@ -176,7 +176,7 @@ void displayAsciiArt(const std::vector<unsigned char>& image, unsigned w, unsign
 /*
 Show the filtertypes of each scanline in this PNG image.
 */
-void displayFilterTypes(const std::vector<unsigned char>& buffer, bool ignore_checksums) {
+static void displayFilterTypes(const std::vector<unsigned char>& buffer, bool ignore_checksums) {
   //Get color type and interlace type
   lodepng::State state;
   if(ignore_checksums) {
@@ -257,7 +257,16 @@ void displayFilterTypes(const std::vector<unsigned char>& buffer, bool ignore_ch
 /*
 Main
 */
-int main(int argc, char *argv[]) /*list the chunks*/ {
+
+#include "monolithic_examples.h"
+
+#if defined(BUILD_MONOLITHIC)
+#define main      lodepng_example_png_info_main
+#endif
+
+int main(int argc, const char** argv) {
+  /*list the chunks*/
+
   bool ignore_checksums = false;
   std::string filename = "";
   for (int i = 1; i < argc; i++) {
@@ -310,4 +319,6 @@ int main(int argc, char *argv[]) /*list the chunks*/ {
   displayFilterTypes(buffer, ignore_checksums);
   std::cout << std::endl;
   displayAsciiArt(image, w, h);
+
+  return 0;
 }

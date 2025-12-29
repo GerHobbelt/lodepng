@@ -44,7 +44,7 @@ NOTE: it overwrites the output file without warning if it exists!
 
 //returns 0 if all went ok, non-0 if error
 //output image is always given in RGBA (with alpha channel), even if it's a BMP without alpha channel
-unsigned decodeBMP(std::vector<unsigned char>& image, unsigned& w, unsigned& h, const std::vector<unsigned char>& bmp) {
+static unsigned decodeBMP(std::vector<unsigned char>& image, unsigned& w, unsigned& h, const std::vector<unsigned char>& bmp) {
   static const unsigned MINHEADER = 54; //minimum BMP header size
 
   if(bmp.size() < MINHEADER) return -1;
@@ -95,7 +95,14 @@ unsigned decodeBMP(std::vector<unsigned char>& image, unsigned& w, unsigned& h, 
   return 0;
 }
 
-int main(int argc, char *argv[]) {
+
+#include "monolithic_examples.h"
+
+#if defined(BUILD_MONOLITHIC)
+#define main      lodepng_example_bmp2png_main
+#endif
+
+int main(int argc, const char** argv) {
   if(argc < 3) {
     std::cout << "Please provide input BMP and output PNG file names" << std::endl;
     return 0;
@@ -122,4 +129,5 @@ int main(int argc, char *argv[]) {
 
   lodepng::save_file(png, argv[2]);
 
+  return 0;
 }

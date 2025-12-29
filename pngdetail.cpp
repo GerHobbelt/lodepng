@@ -43,7 +43,7 @@ image, exif, and ICC profile, etc...
 #include <stdio.h>
 #include <inttypes.h>
 
-void showHelp() {
+static void showHelp(void) {
   std::cout << "pngdetail by Lode Vandevenne" << std::endl;
   std::cout << "version: " << LODEPNG_VERSION_STRING << std::endl;
   std::cout << "Shows detailed information about a PNG image, its compression and possible corruptions.\n"
@@ -135,7 +135,7 @@ struct Options {
   }
 };
 
-unsigned inspect_chunk_by_name(const unsigned char* data, const unsigned char* end,
+static unsigned inspect_chunk_by_name(const unsigned char* data, const unsigned char* end,
                                lodepng::State& state, const char type[5]) {
   const unsigned char* p = lodepng_chunk_find_const(data, end, type);
   if(!p) return 0; // not found, but this is not considered an error
@@ -254,7 +254,7 @@ struct Data {
   }
 };
 
-std::string colorTypeString(LodePNGColorType type) {
+static std::string colorTypeString(LodePNGColorType type) {
   std::string name;
   switch(type) {
     case LCT_GREY: name = "grey"; break;
@@ -281,7 +281,7 @@ T strtoval(const std::string& s) {
 /*
 Display the names and sizes of all chunks in the PNG file.
 */
-void displayChunkNames(Data& data, const Options& options) {
+static void displayChunkNames(Data& data, const Options& options) {
   data.loadInspect();
   if(!data.is_png) return;
   data.loadFile();
@@ -333,7 +333,7 @@ void displayChunkNames(Data& data, const Options& options) {
   }
 }
 
-void RGBtoHSL(unsigned char r, unsigned char g, unsigned char b, unsigned char* h, unsigned char* s, unsigned char* l) {
+static void RGBtoHSL(unsigned char r, unsigned char g, unsigned char b, unsigned char* h, unsigned char* s, unsigned char* l) {
   int cmax = std::max<int>(r, std::max<int>(g, b));
   int cmin = std::min<int>(r, std::min<int>(g, b));
   if(cmin == cmax) {
@@ -354,7 +354,7 @@ HCT: Hue, Chroma, Tone: returns a linear combination between a pure hue and a gr
 *) Chroma: The linear combination factor: 255 for pure hue, 0 for pure greyscale
 *) Tone: greyscale to mix with: 0 = black (shade), 255 = white (tint), in between = grey (tone)
 */
-void RGBtoHCT(unsigned char r, unsigned char g, unsigned char b, unsigned char* h, unsigned char* c, unsigned char* t) {
+static void RGBtoHCT(unsigned char r, unsigned char g, unsigned char b, unsigned char* h, unsigned char* c, unsigned char* t) {
   int cmax = std::max<int>(r, std::max<int>(g, b));
   int cmin = std::min<int>(r, std::min<int>(g, b));
   RGBtoHSL(r, g, b, h, c, t);
@@ -363,7 +363,7 @@ void RGBtoHCT(unsigned char r, unsigned char g, unsigned char b, unsigned char* 
 }
 
 // add 32 to get small letter instead of capital
-char HueToLetter(int h) {
+static char HueToLetter(int h) {
   char hl = 'R';
   // 12 unique hue letters for 30 degree increment hues.
   if(h < 11 || h >= 244) hl = 'R';  // red
@@ -381,7 +381,7 @@ char HueToLetter(int h) {
   return hl;
 }
 
-char lightnessToLetter(int l) {
+static char lightnessToLetter(int l) {
   int c = ' ';
   if(l < 16) c = ' ';
   else if(l < 48) c = '.';
@@ -411,7 +411,7 @@ static inline int applyDither(int v, int range, int x, int y, bool wrap) {
 
 // x and y are to use for dithering
 // inverted inverts black and white, for in case black text on white background is used (by default it assumes white text on black background)
-char RGBtoLetter(unsigned char r, unsigned char g, unsigned char b, unsigned char a, unsigned x, unsigned y, bool dither = true, bool inverted = false) {
+static char RGBtoLetter(unsigned char r, unsigned char g, unsigned char b, unsigned char a, unsigned x, unsigned y, bool dither = true, bool inverted = false) {
   if(a < 255) {
     r = a * r / 255;
     g = a * g / 255;
@@ -449,7 +449,7 @@ char RGBtoLetter(unsigned char r, unsigned char g, unsigned char b, unsigned cha
   }
 }
 
-std::vector<unsigned char> rescale(const std::vector<unsigned char>& in,
+static std::vector<unsigned char> rescale(const std::vector<unsigned char>& in,
                                    int w0, int h0, int w1, int h1, bool smooth) {
   int numchannels = in.size() / (w0 * h0);
   std::vector<unsigned char> out(w1 * h1 * numchannels);
@@ -520,7 +520,7 @@ std::vector<unsigned char> rescale(const std::vector<unsigned char>& in,
 Show ASCII art preview of the image
 Image is given in 16-bit big endian (because only one format, with the max possible precision, is used throughout this)
 */
-void displayAsciiArt(const std::vector<unsigned char>& image, unsigned w, unsigned h, unsigned asciiw) {
+static void displayAsciiArt(const std::vector<unsigned char>& image, unsigned w, unsigned h, unsigned asciiw) {
   const std::vector<unsigned char>* imagep = &image;
   std::vector<unsigned char> image2;
   if(asciiw < w) {
@@ -560,7 +560,7 @@ void displayAsciiArt(const std::vector<unsigned char>& image, unsigned w, unsign
 //sixteen: print 16 bits per pixel
 //alpha: print alpha channel
 //input image ALWAYS given in 16-bit per channel RGBA
-void displayColorsHex(const std::vector<unsigned char>& image, unsigned w, unsigned h, bool sixteen) {
+static void displayColorsHex(const std::vector<unsigned char>& image, unsigned w, unsigned h, bool sixteen) {
   std::ios_base::fmtflags flags = std::cout.flags();
 
   if(w > 0 && h > 0) {
@@ -596,7 +596,7 @@ void displayColorsHex(const std::vector<unsigned char>& image, unsigned w, unsig
 /*
 Show the filtertypes of each scanline in this PNG image.
 */
-void displayFilterTypes(Data& data, const Options& options) {
+static void displayFilterTypes(Data& data, const Options& options) {
   std::cout << (options.use_hex ? std::hex: std::dec);
   data.loadFile();
   if(data.error) return;
@@ -627,7 +627,7 @@ void displayFilterTypes(Data& data, const Options& options) {
 }
 
 //image type MUST be palette
-void displayPalette(Data& data, const Options& options) {
+static void displayPalette(Data& data, const Options& options) {
   data.loadInspect();
   if(data.error) return;
   std::cout << (options.use_hex ? std::hex: std::dec);
@@ -648,7 +648,7 @@ void displayPalette(Data& data, const Options& options) {
 }
 
 //image type MUST be palette
-void displayPalettePixels(const std::vector<unsigned char>& buffer, const Options& options) {
+static void displayPalettePixels(const std::vector<unsigned char>& buffer, const Options& options) {
   unsigned w, h;
   lodepng::State state;
   std::vector<unsigned char> out;
@@ -689,7 +689,7 @@ void displayPalettePixels(const std::vector<unsigned char>& buffer, const Option
   }
 }
 
-void printZlibInfo(Data& data) {
+static void printZlibInfo(Data& data) {
   data.loadFile();
   if(data.error || !data.isPng()) return;
   const std::vector<unsigned char>& png = data.buffer;
@@ -745,7 +745,7 @@ void printZlibInfo(Data& data) {
 // returns number of unique RGBA colors in the image
 // also fills unique r, g, b, a counts in the output parameters
 // the input image is in 16-bit per channel color, so 8 chars per pixel
-size_t countColors(const std::vector<unsigned char>& image, unsigned w, unsigned h,
+static size_t countColors(const std::vector<unsigned char>& image, unsigned w, unsigned h,
     size_t* ro, size_t* go, size_t* bo, size_t* ao) {
   typedef std::pair<std::pair<unsigned short, unsigned short>, std::pair<unsigned short, unsigned short> > RGBA;
   std::map<RGBA, size_t> rgbam;
@@ -781,7 +781,7 @@ size_t countColors(const std::vector<unsigned char>& image, unsigned w, unsigned
 }
 
 
-void showError(Data& data, const Options& options) {
+static void showError(Data& data, const Options& options) {
   std::cout << (options.use_hex ? std::hex: std::dec);
   std::string prefix = (options.use_hex ? "0x": "");
   if(!data.error) {
@@ -790,7 +790,7 @@ void showError(Data& data, const Options& options) {
   std::cout << "Decoding error " << prefix << data.error << ": " << lodepng_error_text(data.error) << std::endl;
 }
 
-void loadWithErrorRecovery(Data& data, const Options& options, bool show_errors_mode) {
+static void loadWithErrorRecovery(Data& data, const Options& options, bool show_errors_mode) {
   (void)options;
   unsigned& error = data.error;
   lodepng::State& state = data.state;
@@ -844,7 +844,7 @@ void loadWithErrorRecovery(Data& data, const Options& options, bool show_errors_
   }
 }
 
-void showSingleLineSummary(Data& data, const Options& options) {
+static void showSingleLineSummary(Data& data, const Options& options) {
   data.loadInspect();
   if(data.error && data.error != 57) return; // CRC error (57) ignored here for parsing of header only
   std::cout << (options.use_hex ? std::hex: std::dec);
@@ -899,7 +899,7 @@ static std::string printableICCWord(const unsigned char* icc, size_t size, size_
   return result;
 }
 
-void printICCDetails(const unsigned char* icc, size_t size, const std::string& indent) {
+static void printICCDetails(const unsigned char* icc, size_t size, const std::string& indent) {
   // 128 for header, 4 for num tags
   if(size < 132) {
     std::cout << indent << "Invalid ICC: too small to contain header" << std::endl;
@@ -1029,7 +1029,7 @@ void printICCDetails(const unsigned char* icc, size_t size, const std::string& i
   }
 }
 
-void showHex(const unsigned char* data, size_t size, const Options& options) {
+static void showHex(const unsigned char* data, size_t size, const Options& options) {
   for(size_t i = 0; i < size; i++) {
     unsigned char c = data[i];
     if(options.hexformat == HF_BIN) {
@@ -1043,7 +1043,7 @@ void showHex(const unsigned char* data, size_t size, const Options& options) {
   if(options.hexformat != HF_BIN) std::cout << std::endl;
 }
 
-void showHeaderInfo(Data& data, const Options& options) {
+static void showHeaderInfo(Data& data, const Options& options) {
   data.loadInspect();
   if(data.error) return;
   std::cout << (options.use_hex ? std::hex: std::dec);
@@ -1147,7 +1147,7 @@ void showHeaderInfo(Data& data, const Options& options) {
 }
 
 // shortens the text unless options.expand_long_texts is true
-std::string shortenText(const std::string& text, const Options& options) {
+static std::string shortenText(const std::string& text, const Options& options) {
   if(options.expand_long_texts) return text;
   size_t maxlen = 512;
   size_t maxnl = options.verbose ? 5 : 1;
@@ -1166,7 +1166,7 @@ std::string shortenText(const std::string& text, const Options& options) {
 }
 
 // A bit more PNG info, which is from chunks that can come after IDAT. showHeaderInfo shows most other stuff.
-void showPNGInfo(Data& data, const Options& options) {
+static void showPNGInfo(Data& data, const Options& options) {
   data.loadInspect();
   if(!data.is_png) return;
   loadWithErrorRecovery(data, options, false);
@@ -1197,7 +1197,7 @@ void showPNGInfo(Data& data, const Options& options) {
   }
 }
 
-void showColorStats(Data& data, const Options& options) {
+static void showColorStats(Data& data, const Options& options) {
   data.loadInspect();
   if(!data.is_png) return;
   std::cout << (options.use_hex ? std::hex: std::dec);
@@ -1238,13 +1238,13 @@ void showColorStats(Data& data, const Options& options) {
   }
 }
 
-void showErrors(Data& data, const Options& options) {
+static void showErrors(Data& data, const Options& options) {
   std::cout << "Error report: " << std::endl;
   Data data2(data.filename);
   loadWithErrorRecovery(data2, options, true);
 }
 
-uint32_t readExifUint32(const unsigned char* exif, size_t size, size_t pos, bool big_endian) {
+static uint32_t readExifUint32(const unsigned char* exif, size_t size, size_t pos, bool big_endian) {
   if(pos + 4 > size) return 0;
   if(big_endian) {
     return ((uint32_t)exif[pos + 0] << 24u) | ((uint32_t)exif[pos + 1] << 16u) | ((uint32_t)exif[pos + 2] << 8u) | (uint32_t)exif[pos + 3];
@@ -1253,7 +1253,7 @@ uint32_t readExifUint32(const unsigned char* exif, size_t size, size_t pos, bool
   }
 }
 
-uint32_t readExifUint16(const unsigned char* exif, size_t size, size_t pos, bool big_endian) {
+static uint32_t readExifUint16(const unsigned char* exif, size_t size, size_t pos, bool big_endian) {
   if(pos + 2 > size) return 0;
   if(big_endian) {
     return ((uint32_t)exif[pos + 0] << 8u) | (uint32_t)exif[pos + 1];
@@ -1264,7 +1264,7 @@ uint32_t readExifUint16(const unsigned char* exif, size_t size, size_t pos, bool
 
 
 // shows all the information from 1 IFD from the exif file. If more IFDs are linked, recursively shows those too.
-void showExifIFD(const unsigned char* exif, size_t size, size_t ifd_pos, bool big_endian, bool is_thumbnail, bool is_sub) {
+static void showExifIFD(const unsigned char* exif, size_t size, size_t ifd_pos, bool big_endian, bool is_thumbnail, bool is_sub) {
   size_t pos = ifd_pos;
   size_t sub_ifd = 0;
   if(pos + 2 > size) {
@@ -1385,7 +1385,7 @@ void showExifIFD(const unsigned char* exif, size_t size, size_t ifd_pos, bool bi
 // Shows information from the EXIF chunk in the PNG, this only shows the basics
 // and some primitive values of the EXIF, it's not a complete EXIF parser but
 // shows the most common tags by name to verify the EXIF chunk handling is working.
-void showExif(Data& data) {
+static void showExif(Data& data) {
   data.loadInspect();
   if(data.error) return;
   if(!data.state.info_png.exif_defined) {
@@ -1413,7 +1413,7 @@ void showExif(Data& data) {
   showExifIFD(exif, size, ifd, big_endian, false, false);
 }
 
-void showRender(Data& data, const Options& options) {
+static void showRender(Data& data, const Options& options) {
   data.loadPixels();
   if(data.error) return;
   if(options.rendermode == RM_ASCII) {
@@ -1434,7 +1434,7 @@ void showRender(Data& data, const Options& options) {
 }
 
 
-void showInfos(Data& data, const Options& options) {
+static void showInfos(Data& data, const Options& options) {
   if(options.show_one_line_summary) showSingleLineSummary(data, options);
   if(options.show_errors) showErrors(data, options);
   if(options.show_exif) showExif(data);
@@ -1450,7 +1450,14 @@ void showInfos(Data& data, const Options& options) {
   if(data.error) showError(data, options);
 }
 
-int main(int argc, char *argv[]) {
+
+#include "monolithic_examples.h"
+
+#if defined(BUILD_MONOLITHIC)
+#define main      lodepng_pngdetail_main
+#endif
+
+int main(int argc, const char** argv) {
   Options options;
   bool options_chosen = false;
 

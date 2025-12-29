@@ -44,7 +44,13 @@ Gimp 2.8 image editor (until you set mode to RGB).
 
 #include "lodepng.h"
 
-int main(int argc, char *argv[]) {
+#include "monolithic_examples.h"
+
+#if defined(BUILD_MONOLITHIC)
+#define main      lodepng_example_4bit_palette_main
+#endif
+
+int main(int argc, const char** argv) {
   //check if user gave a filename
   if(argc < 2) {
     std::cout << "please provide a filename to save to" << std::endl;
@@ -98,4 +104,6 @@ int main(int argc, char *argv[]) {
     return 0;
   }
   lodepng::save_file(buffer, argv[1]);
+
+  return 0;
 }

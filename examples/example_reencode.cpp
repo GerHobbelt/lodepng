@@ -35,7 +35,14 @@ This sample shows how LodePNG can be used for a conforming PNG editor.
 
 #include <iostream>
 
-int main(int argc, char *argv[]) {
+
+#include "monolithic_examples.h"
+
+#if defined(BUILD_MONOLITHIC)
+#define main      lodepng_example_reencode_main
+#endif
+
+int main(int argc, const char** argv) {
   std::vector<unsigned char> image;
   unsigned w, h;
   std::vector<unsigned char> buffer;
@@ -69,4 +76,6 @@ int main(int argc, char *argv[]) {
   }
 
   lodepng::save_file(buffer, argv[2]);
+
+  return 0;
 }

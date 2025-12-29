@@ -38,7 +38,7 @@ Example 1
 Encode from raw pixels to disk with a single function call
 The image argument has width * height RGBA pixels or width * height * 4 bytes
 */
-void encodeOneStep(const char* filename, const unsigned char* image, unsigned width, unsigned height) {
+static void encodeOneStep(const char* filename, const unsigned char* image, unsigned width, unsigned height) {
   /*Encode the image*/
   unsigned error = lodepng_encode32_file(filename, image, width, height);
 
@@ -51,7 +51,7 @@ Example 2
 Encode from raw pixels to an in-memory PNG file first, then write it to disk
 The image argument has width * height RGBA pixels or width * height * 4 bytes
 */
-void encodeTwoSteps(const char* filename, const unsigned char* image, unsigned width, unsigned height) {
+static void encodeTwoSteps(const char* filename, const unsigned char* image, unsigned width, unsigned height) {
   unsigned char* png;
   size_t pngsize;
 
@@ -69,7 +69,7 @@ Example 3
 Save a PNG file to disk using a State, normally needed for more advanced usage.
 The image argument has width * height RGBA pixels or width * height * 4 bytes
 */
-void encodeWithState(const char* filename, const unsigned char* image, unsigned width, unsigned height) {
+static void encodeWithState(const char* filename, const unsigned char* image, unsigned width, unsigned height) {
   unsigned error;
   unsigned char* png;
   size_t pngsize;
@@ -88,7 +88,14 @@ void encodeWithState(const char* filename, const unsigned char* image, unsigned 
   free(png);
 }
 
-int main(int argc, char *argv[]) {
+
+#include "monolithic_examples.h"
+
+#if defined(BUILD_MONOLITHIC)
+#define main      lodepng_example_encode_c_main
+#endif
+
+int main(int argc, const char** argv) {
   const char* filename = argc > 1 ? argv[1] : "test.png";
 
   /*generate some image*/

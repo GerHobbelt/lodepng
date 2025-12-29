@@ -43,7 +43,7 @@ Press any key to see next image, or esc to quit.
 
 
 /*shows image with SDL. Returns 1 if user wants to fully quit, 0 if user wants to see next image.*/
-int show(const char* filename) {
+static int show(const char* filename) {
   unsigned error;
   unsigned char* image;
   unsigned w, h, x, y;
@@ -130,7 +130,14 @@ int show(const char* filename) {
   return done == 2 ? 1 : 0;
 }
 
-int main(int argc, char* argv[]) {
+
+#include "monolithic_examples.h"
+
+#if defined(BUILD_MONOLITHIC)
+#define main      lodepng_example_SDL_c_main
+#endif
+
+int main(int argc, const char** argv) {
   int i;
 
   if(argc <= 1) printf("Please enter PNG file name(s) to display\n");;

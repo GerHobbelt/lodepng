@@ -38,7 +38,14 @@ color type, no matter what your raw data's color type is)
 
 #include "lodepng.h"
 
-int main(int argc, char *argv[]) {
+
+#include "monolithic_examples.h"
+
+#if defined(BUILD_MONOLITHIC)
+#define main      lodepng_example_encode_type_main
+#endif
+
+int main(int argc, const char** argv) {
   //check if user gave a filename
   if(argc < 2) {
     std::cout << "please provide a filename to save to" << std::endl;
@@ -71,6 +78,10 @@ int main(int argc, char *argv[]) {
   //encode and save
   std::vector<unsigned char> buffer;
   unsigned error = lodepng::encode(buffer, &image[0], w, h, state);
-  if(error) std::cout << "encoder error " << error << ": "<< lodepng_error_text(error) << std::endl;
-  else lodepng::save_file(buffer, argv[1]);
+  if(error)
+	  std::cout << "encoder error " << error << ": "<< lodepng_error_text(error) << std::endl;
+  else
+	  lodepng::save_file(buffer, argv[1]);
+
+  return 0;
 }

@@ -36,7 +36,14 @@ See also the gzip specification, RFC 1952: http://www.gzip.org/zlib/rfc-gzip.htm
 //g++ lodepng.cpp example_gzip.cpp -ansi -pedantic -Wall -Wextra -O3
 
 //saves image to filename given as argument. Warning, this overwrites the file without warning!
-int main(int argc, char *argv[]) {
+
+#include "monolithic_examples.h"
+
+#if defined(BUILD_MONOLITHIC)
+#define main      lodepng_example_gzip_main
+#endif
+
+int main(int argc, const char** argv) {
   if(argc < 2) {
     std::cout << "Please provide input filename (output is input with .gz)" << std::endl;
     return 0;
@@ -88,4 +95,6 @@ int main(int argc, char *argv[]) {
   lodepng_save_file(out, outsize, outfilename.c_str());
 
   free(out);
+
+  return 0;
 }

@@ -37,7 +37,14 @@ NOTE: This is not as good as a true PNG optimizer like optipng or pngcrush.
 
 #include <iostream>
 
-int main(int argc, char *argv[]) {
+
+#include "monolithic_examples.h"
+
+#if defined(BUILD_MONOLITHIC)
+#define main      lodepng_example_optimize_png_main
+#endif
+
+int main(int argc, const char** argv) {
   std::vector<unsigned char> image;
   unsigned w, h;
   std::vector<unsigned char> buffer;
@@ -126,4 +133,6 @@ int main(int argc, char *argv[]) {
 
   lodepng::save_file(buffer, argv[2]);
   std::cout << "New size: " << buffer.size() << " (" << (buffer.size() / 1024) << "K)" << std::endl;
+
+  return 0;
 }

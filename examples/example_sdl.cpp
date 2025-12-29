@@ -39,7 +39,7 @@ Press any key to see next image, or esc to quit.
 #include <iostream>
 #include <SDL2/SDL.h>
 
-int show(const std::string& caption, const unsigned char* rgba, unsigned w, unsigned h) {
+static int show(const std::string& caption, const unsigned char* rgba, unsigned w, unsigned h) {
   //avoid too large window size by downscaling large image
   unsigned jump = 1;
   if(w / 1024 >= jump) jump = w / 1024 + 1;
@@ -103,7 +103,7 @@ int show(const std::string& caption, const unsigned char* rgba, unsigned w, unsi
 }
 
 /*shows image with SDL. Returns 1 if user wants to fully quit, 0 if user wants to see next image.*/
-int showfile(const char* filename) {
+static int showfile(const char* filename) {
   std::cout << "showing " << filename << std::endl;
 
   std::vector<unsigned char> buffer, image;
@@ -120,7 +120,14 @@ int showfile(const char* filename) {
   return show(filename, &image[0], w, h);
 }
 
-int main(int argc, char* argv[]) {
+
+#include "monolithic_examples.h"
+
+#if defined(BUILD_MONOLITHIC)
+#define main      lodepng_example_SDL_cpp_main
+#endif
+
+int main(int argc, const char** argv) {
   if(argc <= 1) std::cout << "Please enter PNG file name(s) to display" << std::endl;
 
   for(int i = 1; i < argc; i++) {

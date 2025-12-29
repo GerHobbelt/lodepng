@@ -41,7 +41,7 @@ g++ lodepng.cpp example_png2bmp.cpp -Wall -Wextra -pedantic -ansi -lSDL -O3
 //Input image must be RGB buffer (3 bytes per pixel), but you can easily make it
 //support RGBA input and output by changing the inputChannels and/or outputChannels
 //in the function to 4.
-void encodeBMP(std::vector<unsigned char>& bmp, const unsigned char* image, int w, int h) {
+static void encodeBMP(std::vector<unsigned char>& bmp, const unsigned char* image, int w, int h) {
   //3 bytes per pixel used for both input and output.
   int inputChannels = 3;
   int outputChannels = 3;
@@ -99,7 +99,14 @@ void encodeBMP(std::vector<unsigned char>& bmp, const unsigned char* image, int 
   bmp[5] = bmp.size() / 16777216;
 }
 
-int main(int argc, char *argv[]) {
+
+#include "monolithic_examples.h"
+
+#if defined(BUILD_MONOLITHIC)
+#define main      lodepng_example_png2bmp_main
+#endif
+
+int main(int argc, const char** argv) {
   if(argc < 3) {
     std::cout << "Please provide input PNG and output BMP file names" << std::endl;
     return 0;
@@ -122,4 +129,6 @@ int main(int argc, char *argv[]) {
   encodeBMP(bmp, &image[0], width, height);
 
   lodepng::save_file(bmp, outfile);
+
+  return 0;
 }

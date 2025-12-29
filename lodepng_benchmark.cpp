@@ -37,38 +37,47 @@ freely, subject to the following restrictions:
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <SDL2/SDL.h> //SDL is used for timing.
+//#include <SDL2/SDL.h> //SDL is used for timing.
+#include <plf_nanotimer.hpp>
 
-bool apply_mods = false;
+static bool apply_mods = false;
 
 #define NUM_DECODE 5 //decode multiple times to measure better. Must be at least 1.
 
-size_t total_pixels = 0;
-size_t total_png_orig_size = 0;
-size_t total_raw_orig_size = 0; // This is the uncompressed data in the raw color format in the original input PNGs
+static size_t total_pixels = 0;
+static size_t total_png_orig_size = 0;
+static size_t total_raw_orig_size = 0; // This is the uncompressed data in the raw color format in the original input PNGs
 
-double total_dec_time = 0;
-size_t total_png_in_size = 0;
-size_t total_raw_in_size = 0; // This is the uncompressed data in the raw color format in the input PNGs given to the decoder (not same as orig when using the encoded ones)
-size_t total_raw_dec_size = 0; // This is the uncompressed data in the raw color format of raw image buffers output by the decoder
+static double total_dec_time = 0;
+static size_t total_png_in_size = 0;
+static size_t total_raw_in_size = 0; // This is the uncompressed data in the raw color format in the input PNGs given to the decoder (not same as orig when using the encoded ones)
+static size_t total_raw_dec_size = 0; // This is the uncompressed data in the raw color format of raw image buffers output by the decoder
 
-double total_enc_time = 0;
-size_t total_raw_enc_size = 0; // This is the uncompressed data in the raw color format of the raw images given to the encoder
-size_t total_png_out_size = 0;
-size_t total_raw_out_size = 0; // This is the uncompressed data in the raw color format of the encoded PNGs
+static double total_enc_time = 0;
+static size_t total_raw_enc_size = 0; // This is the uncompressed data in the raw color format of the raw images given to the encoder
+static size_t total_png_out_size = 0;
+static size_t total_raw_out_size = 0; // This is the uncompressed data in the raw color format of the encoded PNGs
 
-bool verbose = false;
-bool do_decode = false;
-bool do_encode = false;
-bool decode_encoded = false; // do the decoding benchmark on the encoded images rather than the original inputs
+static bool verbose = false;
+static bool do_decode = false;
+static bool do_encode = false;
+static bool decode_encoded = false; // do the decoding benchmark on the encoded images rather than the original inputs
 
-std::string dumpdir;
+static std::string dumpdir;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-double getTime() {
+#if 0
+static double getTime(void) {
   return SDL_GetTicks() / 1000.0;
 }
+#else
+static plf::nanotimer timer;
+
+static double getTime(void) {
+	return timer.get_elapsed_sec();
+}
+#endif
 
 template<typename T, typename U>
 void assertEquals(const T& expected, const U& actual, const std::string& message = "") {
@@ -79,7 +88,7 @@ void assertEquals(const T& expected, const U& actual, const std::string& message
   }
 }
 
-void assertTrue(bool value, const std::string& message = "") {
+static void assertTrue(bool value, const std::string& message = "") {
   if(!value) {
     std::cout << "Error: expected true." << std::endl;
     std::cout << "Message: " << message << std::endl;
@@ -116,7 +125,7 @@ void printValue(const std::string& name, const T& value, const std::string& s2, 
 }
 
 //Test LodePNG encoding and decoding the encoded result, using the C interface
-std::vector<unsigned char> testEncode(Image& image) {
+static std::vector<unsigned char> testEncode(Image& image) {
   unsigned char* encoded = 0;
   size_t encoded_size = 0;
   lodepng::State state;
@@ -136,6 +145,7 @@ std::vector<unsigned char> testEncode(Image& image) {
     //state.encoder.zlibsettings.windowsize = 32768;
   }
 
+  timer.start();
   double t_enc0 = getTime();
 
   unsigned error_enc = lodepng_encode(&encoded, &encoded_size, &image.data[0],
@@ -181,7 +191,7 @@ std::vector<unsigned char> testEncode(Image& image) {
   return result;
 }
 
-void testDecode(const std::vector<unsigned char>& png) {
+static void testDecode(const std::vector<unsigned char>& png) {
   lodepng::State state;
   unsigned char* decoded = 0;
   unsigned w, h;
@@ -192,6 +202,7 @@ void testDecode(const std::vector<unsigned char>& png) {
     //state.decoder.ignore_crc = 1;
   }
 
+  timer.start();
   double t_dec0 = getTime();
   for(int i = 0; i < NUM_DECODE; i++) {
     unsigned error_dec = lodepng_decode(&decoded, &w, &h, &state, png.data(), png.size());
@@ -218,14 +229,14 @@ void testDecode(const std::vector<unsigned char>& png) {
   }
 }
 
-std::string getFilePart(const std::string& path) {
+static std::string getFilePart(const std::string& path) {
   if(path.empty()) return "";
   int slash = path.size() - 1;
   while(slash >= 0 && path[(size_t)slash] != '/') slash--;
   return path.substr((size_t)(slash + 1));
 }
 
-void testFile(const std::string& filename) {
+static void testFile(const std::string& filename) {
   if(verbose) std::cout << "file " << filename << std::endl;
 
   std::vector<unsigned char> png;
@@ -264,7 +275,7 @@ void testFile(const std::string& filename) {
   if(verbose) std::cout << std::endl;
 }
 
-void showHelp(int argc, char *argv[]) {
+static void showHelp(int argc, const char **argv) {
   (void)argc;
   std::cout << "Usage: " << argv[0] << " png_filenames... [OPTIONS...] [--dumpdir directory]" << std::endl;
   std::cout << "Options:" << std::endl;
@@ -276,7 +287,14 @@ void showHelp(int argc, char *argv[]) {
   std::cout << "  -m: apply modifications to encoder and decoder settings, the modification itself must be implemented or changed in the benchmark source code (search for apply_mods in the code, for encode and for decode)" << std::endl;
 }
 
-int main(int argc, char *argv[]) {
+
+#include "monolithic_examples.h"
+
+#if defined(BUILD_MONOLITHIC)
+#define main      lodepng_benchmark_main
+#endif
+
+int main(int argc, const char** argv) {
   verbose = false;
   do_decode = true;
   do_encode = true;
@@ -350,4 +368,6 @@ int main(int argc, char *argv[]) {
               << " compressed bytes (" << ((total_raw_in_size/1024.0/1024.0)/(total_dec_time/NUM_DECODE)) << " MB/s, "
               << ((total_pixels/1024.0/1024.0)/(total_dec_time/NUM_DECODE)) << " MP/s)" << std::endl;
   }
+
+  return 0;
 }
