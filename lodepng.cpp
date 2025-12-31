@@ -44,7 +44,15 @@ Rename this file to lodepng.cpp to use it for C++, or to lodepng.c to use it for
 #pragma warning( disable : 4996 ) /*VS does not like fopen, but fopen_s is not standard C so unusable here*/
 #endif /*_MSC_VER */
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 const char* LODEPNG_VERSION_STRING = "20250506";
+
+#ifdef __cplusplus
+}
+#endif
 
 /*
 This source file is divided into the following large parts. The code sections
@@ -69,6 +77,10 @@ platform if needed. Everything else in the code calls these. Pass
 define them in your own project's source files without needing to change
 lodepng source code. Don't forget to remove "static" if you copypaste them
 from here.*/
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #ifdef LODEPNG_COMPILE_ALLOCATORS
 static void* lodepng_malloc(size_t size) {
@@ -7017,6 +7029,10 @@ const char* lodepng_error_text(unsigned code) {
   return "unknown error code";
 }
 #endif /*LODEPNG_COMPILE_ERROR_TEXT*/
+
+#ifdef __cplusplus
+}
+#endif
 
 /* ////////////////////////////////////////////////////////////////////////// */
 /* ////////////////////////////////////////////////////////////////////////// */
