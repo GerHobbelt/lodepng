@@ -1552,5 +1552,7 @@ int main(int argc, const char** argv) {
     Data data(filenames[i]);
     showInfos(data, options);
   }
+
+  return 0;
 }
 
